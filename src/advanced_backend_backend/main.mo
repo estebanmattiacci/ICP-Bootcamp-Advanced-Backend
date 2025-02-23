@@ -18,20 +18,62 @@ import Types "types";
 actor {
 
   // ==== CHALLENGE 1 ====
-  stable let adminsMap = Vector.init<Principal>(1, Principal.fromText("2vxsx-fae")); // feel free to change to your own principal instead of the anonymous one
+  stable let adminsVector = Vector.init<Principal>(1, Principal.fromText("2vxsx-fae")); // feel free to change to your own principal instead of the anonymous one
 
   public shared ({ caller }) func getAdmins() : async [Principal] {
-    return Vector.toArray(adminsMap);
+    return Vector.toArray(adminsVector);
   };
 
   public shared ({ caller }) func addAdmin(principal : Principal) : async Result.Result<Text, Text> {
 
-    return #ok("Admin " # debug_show principal # " added");
+    switch (isAdmin(principal)) {
+      case (true) {
+        return #ok("Admin " # debug_show principal # " is already present");
+      };
+      case (false) {
+        Vector.add(adminsVector, principal);
+        return #ok("Admin " # debug_show principal # " was added!");
+      };
+    };
+
+    //return #ok("Admin " # debug_show principal # " added");
   };
 
+  public shared ({ caller }) func removeAdmin(principal : Principal) : async Result.Result<Text, Text> {
+
+    switch (isAdmin(principal)) {
+      case (true) {
+        var adminsArray = Vector.toArray(adminsVector);
+        Vector.clear(adminsVector);
+
+        for (i in adminsArray.vals()) {
+          if (i != principal) {
+            Vector.add(adminsVector, i);
+          };
+        };
+        return #ok("Admin " # debug_show principal # " was removed");
+      };
+      case (false) {
+        return #ok("Admin " # debug_show principal # " does not exist");
+      };
+    };
+  };
+
+  private func isAdmin(principal : Principal) : Bool {
+    return Vector.contains<Principal>(adminsVector, principal, Principal.equal);
+  };
   public shared ({ caller }) func callProtectedMethod() : async Result.Result<Text, Text> {
 
-    return #ok("Ups, this was meant to be protected");
+    switch (isAdmin(caller)) {
+      case (true) {
+        return #ok("Access Authorized");
+      };
+      case (false) {
+        return #err("Access not Authorized");
+      };
+    }
+
+    //return #ok("Ups, this was meant to be protected");
   };
 
   // ==== CHALLENGE 2 ====
