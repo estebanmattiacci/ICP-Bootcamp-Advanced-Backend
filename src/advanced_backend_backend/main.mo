@@ -18,7 +18,7 @@ import Types "types";
 actor {
 
   // ==== CHALLENGE 1 ====
-  stable let adminsVector = Vector.init<Principal>(1, Principal.fromText("2vxsx-fae")); // feel free to change to your own principal instead of the anonymous one
+  stable var adminsVector = Vector.init<Principal>(1, Principal.fromText("2vxsx-fae")); // feel free to change to your own principal instead of the anonymous one
 
   public shared ({ caller }) func getAdmins() : async [Principal] {
     return Vector.toArray(adminsVector);
@@ -41,21 +41,18 @@ actor {
 
   public shared ({ caller }) func removeAdmin(principal : Principal) : async Result.Result<Text, Text> {
 
-    switch (isAdmin(principal)) {
-      case (true) {
-        var adminsArray = Vector.toArray(adminsVector);
-        Vector.clear(adminsVector);
+    if (isAdmin(principal)) {
+      let newAdminsVector = Vector.new<Principal>();
 
-        for (i in adminsArray.vals()) {
-          if (i != principal) {
-            Vector.add(adminsVector, i);
-          };
+      for (i in Vector.vals(adminsVector)) {
+        if (i != principal) {
+          Vector.add(newAdminsVector, i);
         };
-        return #ok("Admin " # debug_show principal # " was removed");
       };
-      case (false) {
-        return #ok("Admin " # debug_show principal # " does not exist");
-      };
+      adminsVector := newAdminsVector;
+      return #ok("Admin " # debug_show principal # " was removed");
+    } else {
+      return #ok("Admin " # debug_show principal # " does not exist");
     };
   };
 
