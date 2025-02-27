@@ -23,6 +23,7 @@ dist/
 
 # environment variables
 .env
+src/env.mo
 
 # PocketIC
 pocket-ic
