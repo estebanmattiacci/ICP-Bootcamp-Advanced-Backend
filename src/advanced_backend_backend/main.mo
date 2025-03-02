@@ -13,7 +13,8 @@ import { JSON } "mo:serde";
 import Debug "mo:base/Debug";
 import IC "ic:aaaaa-aa";
 import Env "./env";
-
+import Counter "canister:counter";
+import Error "mo:base/Error";
 // import the custom types we have in Types.mo
 import Types "types";
 
@@ -98,7 +99,7 @@ actor {
     transformed;
   };
 
-  public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text }, Text> {
+  public func outcall_ai_model(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text }, Text> {
 
     let ic : Types.IC = actor ("aaaaa-aa");
     let host : Text = "api.mistral.ai";
@@ -133,7 +134,6 @@ actor {
       url = url;
       max_response_bytes = null; //optional for request
       headers = request_header;
-      //note: type of `body` is ?[Nat8] so you pass it here as "?request_body_as_nat8" instead of "request_body_as_nat8"
       body = ?request_body_as_nat8;
       method = #post;
       transform = ?transform_context;
@@ -158,16 +158,50 @@ actor {
 
   // ==== CHALLENGE 3 ====
 
+  // Get the value of the counter.
+
   public func callOtherCanister() : async Result.Result<Text, Text> {
-    return #ok("Not Implemented ");
+
+    let previousval : Nat = await Counter.getCount();
+    let newval : Nat = await Counter.increment();
+
+    return #ok("Previous value : " # Nat.toText(previousval) # " New value : " # Nat.toText(newval));
+    //return #ok("Not Implemented ");
   };
 
   public func callOutsideCanister() : async Result.Result<Text, Text> {
+
     return #ok("Not Implemented ");
   };
 
+  public shared (message) func whoami() : async Principal {
+    return message.caller;
+  };
+
   public func callManagementCanister() : async Result.Result<Text, Text> {
-    return #ok("Not Implemented ");
+    try {
+      let ic = actor "aaaaa-aa" : actor {
+        canister_status : { canister_id : Principal } -> async {
+          settings : { controllers : [Principal] };
+          memory_size : Nat;
+          cycles : Nat;
+          status : { #stopped; #stopping; #running };
+        };
+      };
+
+      Cycles.add(100_000_000_000);
+
+      let principal = await whoami();
+      let status = await ic.canister_status({ canister_id = principal });
+
+      let memory = status.memory_size;
+      let cycles = status.cycles;
+
+      return #ok("Canister memory: " # Nat.toText(memory) # " bytes, Cycles: " # Nat.toText(cycles));
+    } catch (error) {
+      return #err("Error calling management canister: " # Error.message(error));
+    };
+
   };
 
   // ==== CHALLENGE 4 ====
